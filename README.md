@@ -4,8 +4,8 @@ Implementação de uma arquitetura sistólica para multiplicação de matrizes e
 
 ## Cronograma
 
-- [ ] Desenhar o diagrama de blocos
-- [ ] Pesquisar tipos de arquiteturas
+- [X] Desenhar o diagrama de blocos
+- [X] Pesquisar tipos de arquiteturas
 - [ ] Configuração do SoC/FPGA
 - [ ] Comunicação SoC com FPGA
 - [ ] Implementação da arquitetura escolhida
