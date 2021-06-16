@@ -37,7 +37,7 @@ architecture behave of PE is
           right_output <= (others => '0');
         elsif (rising_edge(clock)) then
           temp := left_input*right_input;
-          memory <= temp(N-1 downto 0);--memory + temp(N-1 downto 0);
+          memory <= memory + temp(N-1 downto 0);
           left_output <= right_input;
           right_output <= left_input;
         end if;

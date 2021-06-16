@@ -11,7 +11,8 @@ add wave -radix binary -label clock /clk
 add wave -radix signed -label matrix_a /matrix_a
 add wave -radix signed -label matrix_b /matrix_b
 add wave -radix signed -label matrix_c /matrix_c
-add wave -radix signed -label wires /mesh_array/connections
+# add wave -radix signed -label wires /mesh_array/connections
+add wave -radix signed -label wires /wires
 
 run 1000ns
 
