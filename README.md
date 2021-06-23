@@ -4,15 +4,17 @@ Implementação de uma arquitetura sistólica para multiplicação de matrizes e
 
 ## Cronograma
 
-- [X] Desenhar o diagrama de blocos
-- [X] Pesquisar tipos de arquiteturas
-- [ ] Configuração do SoC/FPGA
-- [ ] Comunicação SoC com FPGA
-- [ ] Implementação da arquitetura escolhida
-- [ ] Debug e Revisão
-- [ ] Treinamento de uma NN simples para testar o funcionamento
-- [ ] Verificar a diferença do desempenho com e sem a implementação
-- [ ] Documentar
+| Atividade | Cronograma |
+|-----------|------------|
+| - [X] Desenhar o diagrama de blocos   | (04/06/2021)  |
+| - [X] Pesquisar tipos de arquiteturas  | (11/06/2021)  |
+| - [ ] Implementação da arquitetura escolhida | (25/06/2021) |
+| - [ ] Configuração do SoC/FPGA  | (02/07/2021) |
+| - [ ] Comunicação SoC com FPGA  |  (09/07/2021)  |
+| - [ ] Debug e Revisão  | (16/07/2021) |
+| - [ ] Treinamento de uma NN simples para testar o funcionamento  | (23/07/2021) |
+| - [ ] Verificar a diferença do desempenho com e sem a implementação  | (30/07/2021) |
+| - [ ] Documentar  | (05/08/2021) |
 
 ## Diagrama de Blocos
 
