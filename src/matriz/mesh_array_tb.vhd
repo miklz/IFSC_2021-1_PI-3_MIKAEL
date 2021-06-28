@@ -9,13 +9,13 @@ end entity;
 
 architecture simul of mesh_array_tb is
 
-  constant matrix_size : natural := 3;
+  constant matrix_size : natural := 10;
   constant n_bits      : natural := 32;
 
   constant T      : time := 20 ns;
   constant delay  : time := 5 ns;
 
-  signal clk, rst : std_logic;
+  signal clk, rst, ready : std_logic;
   signal wires : vector_of_numbers(0 to 2*(matrix_size+1)*matrix_size-1) := (others => (others => 'Z'));
   signal matrix_a, matrix_b, matrix_c : vector_of_numbers(0 to matrix_size*matrix_size-1);
 
@@ -27,7 +27,7 @@ begin
     M => matrix_size
   )
   port map (
-    clk, rst, matrix_a, matrix_b, matrix_c
+    clk, rst, matrix_a, matrix_b, matrix_c, ready
   );
 
   clock : process
@@ -53,11 +53,7 @@ begin
 
     rst <= '0';
 
-    wait for (2*matrix_size-1)*T;
-
-    matrix_a <= (others => (others => '0'));
-    matrix_b <= (others => (others => '0'));
-
+    wait for (2*matrix_size-1)*T - T;
 
     wait for 20*T;
     wait;

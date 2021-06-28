@@ -15,13 +15,15 @@ entity mesh_array is
     reset     : in  std_logic;
     matrix_a  : in  vector_of_numbers(0 to N*N-1);
     matrix_b  : in  vector_of_numbers(0 to N*N-1);
-    matrix_c  : out vector_of_numbers(0 to N*N-1)
+    matrix_c  : out vector_of_numbers(0 to N*N-1);
+    ready     : out std_logic
   );
 
 end entity mesh_array;
 
 architecture behave of mesh_array is
 
+  signal done : std_logic;
   signal connections :  vector_of_numbers(0 to (N+1)*(2*M)-1) := (others => (others => 'Z'));
 
   begin
@@ -38,7 +40,7 @@ architecture behave of mesh_array is
               right_input   => connections((2*M)*i + 2*j+1),
               left_output   => connections((2*M)*(i+1) + 2*j),
               right_output  => connections((2*M)*(i+1) + 2*(j+1)),
-              result        => matrix_c(M*i + j)
+              result        => matrix_c(M*map_row(M, i, j) + map_column(M, i, j))
             );
         end generate left_bord_condition;
 
@@ -51,7 +53,7 @@ architecture behave of mesh_array is
               right_input   => connections((2*M)*i + 2*j+1),
               left_output   => connections((2*M)*(i+1) + 2*j-1),
               right_output  => connections((2*M)*(i+1) + 2*j+1),
-              result        => matrix_c(M*i + j)
+              result        => matrix_c(M*map_row(M, i, j) + map_column(M, i, j))
             );
         end generate right_bord_condition;
 
@@ -64,7 +66,7 @@ architecture behave of mesh_array is
               right_input   => connections((2*M)*i + 2*j+1),
               left_output   => connections((2*M)*(i+1) + 2*j-1),
               right_output  => connections((2*M)*(i+1) + 2*(j+1)),
-              result        => matrix_c(M*i + j)
+              result        => matrix_c(M*map_row(M, i, j) + map_column(M, i, j))
             );
           end generate general_condition;
 
@@ -77,28 +79,39 @@ architecture behave of mesh_array is
 
       if (reset = '1') then
         index := 0;
+        done <= '0';
         for j in 0 to M-1 loop
           connections(2*j) <= (others => '0');
           connections(2*j + 1) <= (others => '0');
         end loop;
       elsif (rising_edge(clock)) then
-        for j in 0 to M-1 loop
-          if (j mod 2 = 0) then
-            connections(2*j) <= matrix_b(M*index + j);
-            connections(2*j + 1) <= matrix_a(M*j + index);
-          else
-            connections(2*j) <= matrix_a(M*j + index);
-            connections(2*j + 1) <= matrix_b(M*index + j);
+        if (done = '0') then
+          for j in 0 to M-1 loop
+            if (j mod 2 = 0) then
+              connections(2*j) <= matrix_b(M*index + j);
+              connections(2*j + 1) <= matrix_a(M*j + index);
+            else
+              connections(2*j) <= matrix_a(M*j + index);
+              connections(2*j + 1) <= matrix_b(M*index + j);
+            end if;
+          end loop;
+
+          index := index + 1;
+
+          if index >= N then
+            index := 0;
+            done <= '1';
           end if;
-        end loop;
-
-        index := index + 1;
-        if index >= N then
-          index := 0;
+        else
+          for j in 0 to M-1 loop
+            connections(2*j) <= (others => '0');
+            connections(2*j + 1) <= (others => '0');
+          end loop;
         end if;
-
       end if;
 
     end process matrix_multiply;
+
+    ready <= done;
 
 end architecture behave;
