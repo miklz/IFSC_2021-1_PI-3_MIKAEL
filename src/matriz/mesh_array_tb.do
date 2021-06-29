@@ -16,7 +16,7 @@ add wave -radix signed -label matrix_c /matrix_c
 # add wave -radix signed -label wires /mesh_array/connections
 add wave -radix signed -label connections /mesh_array/connections
 
-run 1000ns
+run 1500ns
 
 wave zoomfull
 write wave wave.ps
