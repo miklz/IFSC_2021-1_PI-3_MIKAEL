@@ -104,7 +104,25 @@ correta dada pelo modelo em python.
 
 Estou usando o kit de desenvolvimento [Arrow](https://www.arrow.com/en/products/sockit/arrow-development-tools) com [Cyclone V](https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/hb/cyclone-v/cv_5v2.pdf) que possue um ARM Cortex-A9 e um FPGA com 110K elementos lógicos programáveis além de muitos outros periféricos como VGA, USBs, Ethernet etc.
 
-A Intel disponibilizou em seu site www.rocketboards.org um [manual de usuário desse kit](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707) para as primeiras configurações, que me foram muito úteis para entender o processo básico de boot e [configuração dos switchs](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707ConfiguringTheSockit).
+<img src="./img/CycloneV.png" width="500" height="400"/>
+
+Fonte: [rocketboards](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707)
+
+A Intel disponibilizou em seu site www.rocketboards.org um [manual de usuário](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707) desse kit para as primeiras configurações, que me foram muito úteis para entender o processo básico de boot e [configuração dos switchs](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707ConfiguringTheSockit).
+
+### Pré-requisitos
+
+- Sistema operacional linux
+- [ARM Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads)
+- Ferramentas para desenvolvimento [Intel SoC FPGA](https://www.intel.com.br/content/www/br/pt/software/programmable/soc-eds/overview.html)
+- [Quartus II](https://fpgasoftware.intel.com/?edition=lite)
+- Paciência
+
+Faça download da toolchain com nome arm-none-linux-gnueabihf. Uma breve explicação sobre a terminologia usada na toolchain segue:
+
+O linux no nome diz que essa gcc foi preparada para rodar em uma plataforma linux.
+- eabi: Embedded Application Binary Interface
+- hf: Hard Floating (permite computação de ponto flutuante em hardware)
 
 ### Configuração do cartão SD
 
@@ -138,15 +156,11 @@ A inicialização da placa consiste em três estágios (no melhor do meu entendi
 2. O Linux Kernel sobe faz a interface com os componentes.
 3. Sistema de arquivo é estabelecido
 
+## Careful, under construction
+
 ### Scripts
 
-Para compilar a partir do source é necessário ter a toolchain para arm que é a [Linaro toolchain](https://releases.linaro.org/components/toolchain/binaries/) faça download da mais recente que deve possuir um linux-gnueabihf
-
-Uma explicação breve sobre a terminologia usada nesse binário.
-
-O linux no nome diz que essa gcc foi preparada para rodar em uma plataforma linux.
-eabi: Embedded Application Binary Interface
-hf: Hard Floating
+Isso está incompleto e ainda não funcional
 
 U-Boot
 ```bash
