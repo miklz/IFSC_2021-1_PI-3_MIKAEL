@@ -148,85 +148,100 @@ Tanto a referência da imagem quanto a descrição dessa tabela podem ser encont
 
 Nem todos os arquivos da partição 1 são de fato necessários para fazer a placa bootar, por exemplo os arquivos de configuração servem para que a placa o FPGA seja programado logo que dispositivo seja energizado. Mas é possível programar a partir do sistema operacional que é o que farei para poder testar e modificar rapidamente.
 
+Para criar as partições do cartão SD eu recomendo usar o fdisk do próprio sistema linux. Rocketboards disponibiliza um script em python para gerar uma imagem pronta para ser gravada no cartão de memória com as três partições feitas, eu tive alguns problemas e por isso eu prefiro fazer a configuração usando o fdisk e gravar as imagens individualmente nas devidas partições.
+
+Eu segui essas [intruções](https://zhehaomao.com/blog/fpga/2013/12/24/sockit-2.html) e vou repassar elas abaixo caso o link suma.
+
+__Aviso__: Muito cuidado com o local onde o cartão SD foi montado no seu computador, isso pode variar de pc para pc e pode ter consequências sérias caso o dispositivo errado seja formatado.
+
+1. Conecte o cartão SD no computador
+2. sudo fdisk -l para identificar qual device é o cartão SD
+3. sudo fdisk /dev/sdX (substitua X pelo locar correto)
+4. delete partições existentes
+5. Sequência de comandos: (\<enter> significa enter sem comando)
+```
+n
+p
+3
+2048
++2048
+t
+a2
+n
+p
+<enter>
+<enter>
++256M
+t
+1
+0b
+n
+p
+<enter>
+<enter>
+<enter>
+w
+```
+
 ### Ordem do boot
 
 A inicialização da placa consiste em três estágios (no melhor do meu entendimento):
 
 1. Bootloader mapeia a memória RAM, inicializa os periféricos e prepara para que o SO assuma o comando.
-2. O Linux Kernel sobe faz a interface com os componentes.
+2. O Linux Kernel sobe e faz a interface com os componentes.
 3. Sistema de arquivo é estabelecido
-
-## Careful, under construction
 
 ### Scripts
 
-Isso está incompleto e ainda não funcional
+Nota: O bsp-create-settings se encontra dentro do conjunto de aplicativos shell da intel e para fazer uso é necessário passar o caminho completo de onde se encontra no seu sistema. 
+
+Por exemplo: eu instalei a ferramenta de desenvolvimento no meu computador em ~/software/intelFPGA/20.1/
+então para que eu faça uso eu tenho que chamar o script dessa maneira:
+~/software/intelFPGA/20.1/embedded/embedded_command_shell.sh bsp-create-settings
 
 U-Boot
 ```bash
+# Modelo de referência disponibilizado pela Intel
+git clone https://github.com/arrow-socfpga/arrow-sockit-ghrd.git
+cd arrow-sockit-ghrd
+# Branch mais atual
+git checkout -b sockit_build sockit-ghrd-19.1
+
+# Criar board support package (bsp) do projeto
+bsp-create-settings \
+ --type spl \
+ --bsp-dir software/bootloader \
+ --preloader-settings-dir hps_isw_handoff/sockit_ghrd_hps_0/ \
+ --settings software/bootloader/settings.bsp
+
+# Mudar para diretório bootloader
+cd software/bootloader
+
+# Arquivos do U-Boot
 git clone http://git.rocketboards.org/u-boot-socfpga.git
 cd u-boot-socfpga
-git checkout -b build_boot ACDS21.1_REL_GSRD_PR
-export CROSS_COMPILE=/opt/gcc-linaro-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+
+git checkout -b build_boot socfpga_v2020.07
+# qts_filter, formatar os arquivos bsp e copiar para o U-Boot
+./arch/arm/mach-socfpga/qts-filter.sh cyclone5 ../../../ ../ ./board/altera/cyclone5-socdk/qts/
+
+# Toolchain a ser usada, deve estar no PATH ou ser passada a localização dela no seu sistema
+export CROSS_COMPILE=arm-none-linux-gnueabihf-
+# Arquitetura a ser usada
+export ARCH=arm
+
+# Limpa configurações antigas
 make mrproper
+
+# Configurar e compilar U-Boot
 make socfpga_cyclone5_config
 make
+
+# Gravar u-boot na partição do SD (substitua por seu dispositivo correto)
+sudo dd if=u-boot-with-spl.sfp of=/dev/sdX3 bs=512 status=progress
+# Garantir que tudo foi gravado no SD
+sudo sync
 ```
+Referências consultadas: [U-Boot](https://rocketboards.org/foswiki/Documentation/Gsrd131GitTrees#U_45Boot), [norstrand](http://www.norstrand.priv.no/posts/2020-10-12-arrow_sockit_-_u-boot/)
 
-Linux Kernel
-``` bash
-git clone http://git.rocketboards.org/linux-socfpga.git
-cd linux-socfpga
-git checkout -b build_kernel ACDS21.1_REL_GSRD_PR
-export CROSS_COMPILE=/opt/gcc-linaro-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
-make ARCH=arm socfpga_defconfig
-make ARCH=arm uImage LOADADDR=0x8000
-```
-
-Yocto
-``` bash
-mkdir yocto; cd yocto
-# Clone required Yocto git trees 
-git clone -b zeus https://git.yoctoproject.org/git/poky.git
-git clone -b zeus https://git.openembedded.org/meta-openembedded
-git clone -b master https://github.com/kraj/meta-altera.git
-git clone -b master https://github.com/altera-opensource/meta-altera-refdes.git
-cd meta-altera-refdes
-git checkout ACDS20.1STD_REL_GSRD_PR
-
-# Run script to initialize the build environment for bitbake
-# Note: You will be redirect to "build" folder once you execute the command below
-cd ..
-source poky/oe-init-build-env
-
-# Remove default settings imported from template
-sed -i /MACHINE\ \?\?=\ \"qemux86-64\"/d conf/local.conf
-
-# Use systemd
-echo 'DISTRO_FEATURES_append = " systemd"' >> conf/local.conf
-echo 'VIRTUAL-RUNTIME_init_manager = "systemd"' >> conf/local.conf
-
-# Use the LTS kernel and set version
-echo 'PREFERRED_PROVIDER_virtual/kernel = "linux-altera-lts"' >> conf/local.conf
-echo 'PREFERRED_VERSION_linux-altera-lts = "5.4.124%"' >> conf/local.conf
-
-# Build additional rootfs type
-echo 'IMAGE_FSTYPES += "tar.gz"' >> conf/local.conf
-
-# Settings for bblayers.conf
-echo 'BBLAYERS += " ${TOPDIR}/../meta-altera "' >> conf/bblayers.conf
-echo 'BBLAYERS += " ${TOPDIR}/../meta-altera-refdes "' >> conf/bblayers.conf
-echo 'BBLAYERS += " ${TOPDIR}/../meta-openembedded/meta-oe "' >> conf/bblayers.conf
-echo 'BBLAYERS += " ${TOPDIR}/../meta-openembedded/meta-networking "' >> conf/bblayers.conf
-echo 'BBLAYERS += " ${TOPDIR}/../meta-openembedded/meta-python "' >> conf/bblayers.conf
-
-# Set the MACHINE, only at a time to avoid build conflict
-echo "MACHINE = \"cyclone5\"" >> conf/local.conf
-
-# Ensure we build in all kernel-modules
-echo "MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS += \"kernel-modules\"" >> conf/local.conf
-
-# Build rootfs image
-bitbake  gsrd-console-image 
-```
-Fonte: [U-Boot](https://rocketboards.org/foswiki/Documentation/Gsrd131GitTrees#U_45Boot), [Kernel](https://rocketboards.org/foswiki/Documentation/Gsrd131GitTrees#Linux_Kernel), [Yocto](https://rocketboards.org/foswiki/Documentation/CycloneVSoCGSRD#Building_Root_Filesystem_Using_Yocto)
+Para o compilar o [kernel](https://rocketboards.org/foswiki/Documentation/BuildingBootloader#Appendix_45_Building_Linux_Binaries) e o [sistema de arquivos](https://rocketboards.org/foswiki/Documentation/CycloneVSoCGSRD#Building_Root_Filesystem_Using_Yocto) eu recomendo seguir as instruções da [intel](https://rocketboards.org/foswiki/Documentation/BuildingBootloader)
