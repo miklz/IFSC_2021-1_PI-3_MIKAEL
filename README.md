@@ -207,13 +207,21 @@ w
 
 Esse é o flow do U-Boot de acordo com [rocketboards](https://rocketboards.org/foswiki/Documentation/BuildingBootloader#U_45Boot_Build_Flows)
 
-![New Flow](img/U_Boot-flow.png)
+![New Flow](./img/U_Boot-flow.png)
+
+Tentei fazer a placa bootar sem o qts_filter mas não fui bem sucedido.
+
+Segundo o manual de referência técnico o boot se dá na seguinte ordem
+
+![Ordem do boot](./img/boot_order.png)
 
 A inicialização da placa consiste em três estágios (no melhor do meu entendimento):
 
-1. Bootloader mapeia a memória RAM, inicializa os periféricos e prepara para que o SO assuma o comando.
-2. O Linux Kernel sobe e faz a interface com os componentes.
-3. Sistema de arquivo é estabelecido
+1. O reset coloca a placa em um estado conhecido
+2. O boot ROM é configurado de fábrica e inicializa o HPS e começa a execução do Preloader.
+3. O Preloader da figura ou SPL (Secound Prestage Loader) inicaliza os periféricos necessários para o U-Boot assumir, notadamente a SRAM.
+4. Com os periféricos minimamente inicializados o kernel assume fazendo o serviço restante e inicia o sistema de arquivo.
+5. A aplicação é o que você quiser fazer.
 
 ### Scripts
 
