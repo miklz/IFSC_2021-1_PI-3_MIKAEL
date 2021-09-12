@@ -10,12 +10,12 @@ Implementação de uma arquitetura sistólica para multiplicação de matrizes e
 | [X] Pesquisar tipos de arquiteturas                               | (11/06/2021) |
 | [X] Implementação da arquitetura escolhida                        | (25/06/2021) |
 | [X] Testbench automátizado para validar a arquitetura             | (02/07/2021) |
-| [ ] Configuração do SoC/FPGA                                      | (28/07/2021) |
-| [ ] Comunicação SoC com FPGA                                      | (04/08/2021) |
-| [ ] Debug e Revisão                                               | (11/08/2021) |
-| [ ] Treinamento de uma NN simples para testar o funcionamento     | (18/08/2021) |
-| [ ] Verificar a diferença do desempenho com e sem a implementação | (25/08/2021) |
-| [ ] Documentar                                                    | (05/08/2021) |
+| [X] Configuração do SoC/FPGA                                      | (01/09/2021) |
+| [X] Comunicação SoC com FPGA                                      | (08/09/2021) |
+| [ ] Debug e Revisão                                               | (11/09/2021) |
+| [ ] Treinamento de uma NN simples para testar o funcionamento     | (18/09/2021) |
+| [ ] Verificar a diferença do desempenho com e sem a implementação | (25/09/2021) |
+| [ ] Documentar                                                    | (05/09/2021) |
 
 ## Diagrama de Blocos
 
@@ -116,13 +116,33 @@ A Intel disponibilizou em seu site www.rocketboards.org um [manual de usuário](
 - [ARM Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads)
 - Ferramentas para desenvolvimento [Intel SoC FPGA](https://www.intel.com.br/content/www/br/pt/software/programmable/soc-eds/overview.html)
 - [Quartus II](https://fpgasoftware.intel.com/?edition=lite)
-- Paciência
+- Paciência (Não Opcional)
 
 Faça download da toolchain com nome arm-none-linux-gnueabihf. Uma breve explicação sobre a terminologia usada na toolchain segue:
 
 O linux no nome diz que essa gcc foi preparada para rodar em uma plataforma linux.
 - eabi: Embedded Application Binary Interface
 - hf: Hard Floating (permite computação de ponto flutuante em hardware)
+
+É possível bootar a placa de formas diferentes como através do FPGA, do cartão SD, do QSPI ou flash NAND. Aqui estão as opções de boot segundo o manual de usuário do SoCKit.
+
+![Boot](./img/boot_config.png)
+
+Como eu estou usando uma cartão SD eu fiz a seguinte configuração como orientado pela rocketboards
+
+![Boot Pins](./img/boot_pins_config.jpg)
+
+Fonte: [rocketboards](https://rocketboards.org/foswiki/Documentation/ArrowSoCKitEdition201707ConfiguringTheSockit)
+
+Para poder fazer a programação parcial do FPGA, isso poder reprogramar alguns setores enquanto outros ficam intactos, é necessário que o switch 6 da placa esteja em uma dessas configurações segundo o manual de referencia técnico do Cyclone V.
+
+![SW6](./img/config_sw6.png)
+
+Eu escolhi a última opção que é o MSEL=00110 como pode ser visto abaixo
+
+<img src="./img/pin_config.jpeg" width="500" height="450"/>
+
+Perceba que a última chave não é usada.
 
 ### Configuração do cartão SD
 
@@ -152,11 +172,11 @@ Para criar as partições do cartão SD eu recomendo usar o fdisk do próprio si
 
 Eu segui essas [intruções](https://zhehaomao.com/blog/fpga/2013/12/24/sockit-2.html) e vou repassar elas abaixo caso o link suma.
 
-__Aviso__: Muito cuidado com o local onde o cartão SD foi montado no seu computador, isso pode variar de pc para pc e pode ter consequências sérias caso o dispositivo errado seja formatado.
+__Aviso__: Muito cuidado com o local onde o cartão SD foi montado no seu computador, isso pode variar de pc para pc e pode ter consequências sérias caso o dispositivo errado seja formatado como a perda permanete de dados ou até mesmo a corrupção do seu SO.
 
 1. Conecte o cartão SD no computador
 2. sudo fdisk -l para identificar qual device é o cartão SD
-3. sudo fdisk /dev/sdX (substitua X pelo locar correto)
+3. sudo fdisk /dev/sdX (substitua X pelo local correto)
 4. delete partições existentes
 5. Sequência de comandos: (\<enter> significa enter sem comando)
 ```
@@ -184,6 +204,10 @@ w
 ```
 
 ### Ordem do boot
+
+Esse é o flow do U-Boot de acordo com [rocketboards](https://rocketboards.org/foswiki/Documentation/BuildingBootloader#U_45Boot_Build_Flows)
+
+![New Flow](img/U_Boot-flow.png)
 
 A inicialização da placa consiste em três estágios (no melhor do meu entendimento):
 
@@ -244,4 +268,8 @@ sudo sync
 ```
 Referências consultadas: [U-Boot](https://rocketboards.org/foswiki/Documentation/Gsrd131GitTrees#U_45Boot), [norstrand](http://www.norstrand.priv.no/posts/2020-10-12-arrow_sockit_-_u-boot/)
 
-Para o compilar o [kernel](https://rocketboards.org/foswiki/Documentation/BuildingBootloader#Appendix_45_Building_Linux_Binaries) e o [sistema de arquivos](https://rocketboards.org/foswiki/Documentation/CycloneVSoCGSRD#Building_Root_Filesystem_Using_Yocto) eu recomendo seguir as instruções da [intel](https://rocketboards.org/foswiki/Documentation/BuildingBootloader)
+## Melhor referência
+
+Infelizmente não encontrei isso quando estava começando nessa jornada, o melhor tutorial que encontrei está no github [aqui](https://github.com/zangman/de10-nano/wiki/Introduction-to-SoCs) ele foi feito para a DE10-nano mas os conceitos são os mesmos. Ele dá uma introdução muito boa ao QSYS, ao Device Tree Overlay e como fazer para programar o FPGA através do kernel. Também no build do kernel para possibilitar a utilização do DTO.
+
+Como é dito no tutorial citado acima é necessário que as pontes do FPGA estejam ativas, no meu caso quando eu fiz o build do kernel só consegui ver duas pontes a Lightweight e a hps2fpga. Para habilitar todas as pontes eu fiz uma cópia do DTS usado no build (socfpga_cyclone5_socdk.dts) e habilitei as duas pontes. O DTS está aqui no repo com o nome muito criativo de arrow_mikael.dts.
