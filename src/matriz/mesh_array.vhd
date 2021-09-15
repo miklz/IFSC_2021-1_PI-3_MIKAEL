@@ -13,8 +13,8 @@ entity mesh_array is
   port (
     clock     : in  std_logic;
     reset     : in  std_logic;
-    matrix_a  : in  vector_of_numbers(0 to N*N-1);
-    matrix_b  : in  vector_of_numbers(0 to N*N-1);
+    matrix_a  : in  vector_of_numbers(0 to N-1);
+    matrix_b  : in  vector_of_numbers(0 to N-1);
     matrix_c  : out vector_of_numbers(0 to N*N-1);
     ready     : out std_logic
   );
@@ -27,6 +27,18 @@ architecture behave of mesh_array is
   signal connections :  vector_of_numbers(0 to (N+1)*(2*M)-1) := (others => (others => 'Z'));
 
   begin
+
+    matrix_input : for i in 0 to N-1 generate
+      odd_position : if (i mod 2 = 0) generate
+        connections(2*i) <= matrix_b(i);
+        connections(2*i + 1) <= matrix_a(i);
+      end generate odd_position;
+
+      even_position : if (i mod 2 /= 0) generate
+        connections(2*i) <= matrix_a(i);
+        connections(2*i + 1) <= matrix_b(i);
+      end generate even_position;
+    end generate matrix_input;
 
     matrix_rows : for i in 0 to N-1 generate
       matrix_columns : for j in 0 to M-1 generate
@@ -80,33 +92,13 @@ architecture behave of mesh_array is
       if (reset = '1') then
         index := 0;
         done <= '0';
-        for j in 0 to M-1 loop
-          connections(2*j) <= (others => '0');
-          connections(2*j + 1) <= (others => '0');
-        end loop;
       elsif (rising_edge(clock)) then
         if (done = '0') then
-          for j in 0 to M-1 loop
-            if (j mod 2 = 0) then
-              connections(2*j) <= matrix_b(M*index + j);
-              connections(2*j + 1) <= matrix_a(M*j + index);
-            else
-              connections(2*j) <= matrix_a(M*j + index);
-              connections(2*j + 1) <= matrix_b(M*index + j);
-            end if;
-          end loop;
-
           index := index + 1;
-
           if index >= N then
             index := 0;
             done <= '1';
           end if;
-        else
-          for j in 0 to M-1 loop
-            connections(2*j) <= (others => '0');
-            connections(2*j + 1) <= (others => '0');
-          end loop;
         end if;
       end if;
 
