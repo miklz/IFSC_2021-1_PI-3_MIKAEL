@@ -28,7 +28,7 @@ architecture behave of matrix_mult_control is
     signal matrix_a_column          :   vector_of_numbers(0 to N_dim - 1);
     signal matrix_b_row             :   vector_of_numbers(0 to N_dim - 1);
     signal matrix_c                 :   vector_of_numbers(0 to N_dim*N_dim - 1);
-    signal switch_buffer, ready     :   std_logic;
+    signal switch_buffer, ready, clk_mult   :   std_logic;
 
     begin
 
@@ -40,26 +40,23 @@ architecture behave of matrix_mult_control is
                 index := 0;
                 switch_buffer <= '0';
                 double_buffer_matrix_row <= (others => (others => '0'));
-            elsif (rising_edge(clock)) then 
-                if (avs_write = '1') then 
+            elsif (rising_edge(clock)) then
+                if (avs_write = '1') then
                     double_buffer_matrix_row(index) <= avs_writedata;
-                    index := index + 1;
+                else
+                    double_buffer_matrix_row(index) <= (others => '0');
                 end if;
+                index := index + 1;
             end if;
 
-            if ((index = 0) and (index < N-1)) then 
-                clk_mult <= '1';
+            -- Control double buffer
+            if (index < 2*N-1) then
                 switch_buffer <= '0';
-            elsif ((index >= N-1) and (index < 2*N-1)) then 
-                clk_mult <= '0';
-            elsif ((index >= 2*N-1) and (index < 3*N-1)) then 
-                clk_mult <= '1';
-                switch_buffer <= '1';
             else
-                clk_mult <= '0';
+                switch_buffer <= '1';
             end if;
 
-            if (index >= 4*N-1) then 
+            if (index >= 4*N-1) then
                 index := 0;
             end if;
 
@@ -69,22 +66,46 @@ architecture behave of matrix_mult_control is
             variable    index   :   natural :=  0;
         begin
 
-            if (reset = '1') then 
+            if (reset = '1') then
                 index := 0;
+                avs_readdata <= (others => '0');
                 matrix_output <= (others => (others => '0'));
-            elsif (rising_edge(clock)) then 
+            elsif (rising_edge(clock)) then
                 if (avs_read = '1') then
-                    if (ready = '0') then 
+                    if (ready = '0') then
                         avs_readdatavalid <= '0';
                     else
                         index := index + 1;
                         avs_readdatavalid <= '1';
                     end if;
                     avs_readdata <= matrix_c(index);
+                else
+                    avs_readdata <= (others => '0');
                 end if;
             end if;
 
+            if (index >= N_dim*N_dim - 1) then
+                index := 0;
+            end if;
+
         end process send_data;
+
+        matrix_clock    :   process(clock, reset)
+            variable index      :   natural := 0;
+        begin
+
+            if (reset = '1') then
+                index := 0;
+                clk_mult <= '0';
+            elsif(rising_edge(clock)) then
+                index := index + 1;
+                if (index = 2*N-1) then
+                    index := 0;
+                    clk_mult <= not clk_mult;
+                end if;
+            end if;
+
+        end process matrix_clock;
 
         mult_matrix :   entity  work.mesh_array(behave)
         generic map(
@@ -96,11 +117,11 @@ architecture behave of matrix_mult_control is
             matrix_b => matrix_b_row, matrix_c => matrix_c, ready => ready
         );
 
-        matrix_a_column <= 
+        matrix_a_column <=
             double_buffer_matrix_row(0 to N-1)      when ((switch_buffer = '0') and (ready='0')) else 
             double_buffer_matrix_row(2*N to 3*N-1)  when ((switch_buffer = '1') and (ready='0')) else
             (others => (others => '0'));
-        matrix_b_row <= 
+        matrix_b_row <=
             double_buffer_matrix_row(N to 2*N-1)    when ((switch_buffer = '0') and (ready='0')) else 
             double_buffer_matrix_row(3*N to 4*N-1)  when ((switch_buffer = '1') and (ready='0')) else
             (others => (others => '0'));

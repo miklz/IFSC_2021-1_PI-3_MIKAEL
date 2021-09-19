@@ -8,6 +8,7 @@ package array_types is
 
   subtype number is signed(N_BITS-1 downto 0);
   type vector_of_numbers is array (natural range <>) of number;
+  type integer_vector is array (natural range <>) of integer;
 
   -- Map elements of the mesh matrix to the standard position
   function map_row(columns, i, j : natural)

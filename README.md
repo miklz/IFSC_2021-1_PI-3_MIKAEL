@@ -215,7 +215,7 @@ Segundo o manual de referência técnico o boot se dá na seguinte ordem
 
 ![Ordem do boot](./img/boot_order.png)
 
-A inicialização da placa consiste em três estágios (no melhor do meu entendimento):
+A inicialização da placa segundo o [manual de referência técnico](https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/hb/cyclone-v/cv_54001.pdf) do cyclone V
 
 1. O reset coloca a placa em um estado conhecido
 2. O boot ROM é configurado de fábrica e inicializa o HPS e começa a execução do Preloader.
@@ -232,7 +232,7 @@ então para que eu faça uso eu tenho que chamar o script dessa maneira:
 ~/software/intelFPGA/20.1/embedded/embedded_command_shell.sh bsp-create-settings
 
 U-Boot
-```bash
+``` bash
 # Modelo de referência disponibilizado pela Intel
 git clone https://github.com/arrow-socfpga/arrow-sockit-ghrd.git
 cd arrow-sockit-ghrd
@@ -276,8 +276,33 @@ sudo sync
 ```
 Referências consultadas: [U-Boot](https://rocketboards.org/foswiki/Documentation/Gsrd131GitTrees#U_45Boot), [norstrand](http://www.norstrand.priv.no/posts/2020-10-12-arrow_sockit_-_u-boot/)
 
+Para buildar o kernel se pode seguir a referência citada no final desse documento ou se pode usar o defconfig que disponibilizei aqui no github com o nome de arrow_kernel_defconfig só copie para dentro da pasta que vai compilar o kernel em arch/arm/configs
+
+``` bash
+# Carregue as configurações para build
+make arrow_kernel_defconfig
+# Compile
+make LOCALVERSION=zImage -j8
+```
+
+Isso irá gerar a imagem do kernel compactada. E para o sistema de arquivo você pode colocar o que quiser, arch-linux, debian etc. Ou fazer o seu próprio com yocto ou o buildroot.
+
+Após ter isso feito copie o kernel para dentro da partição 1 e o sistema de arquivo para a partição 2.
+
+Mais uma coisa: para poder fazer uso das 4 pontes do FPGA é necessário habilitar todas a pontes no dts como fiz no arquivo arrow_mikael.dts disponibilizado aqui no repositório.
+
+``` bash
+# Build dtb pela árvore do kernel (kernel tree)
+make arrow_mikael.dts
+# Outra opção usando device tree compilers
+dtc -O dtb -o arrow_mikael.dts arrow_mikael.dtb
+```
+Copie o .dtb para a mesma partição do kernel
+
 ## Melhor referência
 
 Infelizmente não encontrei isso quando estava começando nessa jornada, o melhor tutorial que encontrei está no github [aqui](https://github.com/zangman/de10-nano/wiki/Introduction-to-SoCs) ele foi feito para a DE10-nano mas os conceitos são os mesmos. Ele dá uma introdução muito boa ao QSYS, ao Device Tree Overlay e como fazer para programar o FPGA através do kernel. Também no build do kernel para possibilitar a utilização do DTO.
 
 Como é dito no tutorial citado acima é necessário que as pontes do FPGA estejam ativas, no meu caso quando eu fiz o build do kernel só consegui ver duas pontes a Lightweight e a hps2fpga. Para habilitar todas as pontes eu fiz uma cópia do DTS usado no build (socfpga_cyclone5_socdk.dts) e habilitei as duas pontes. O DTS está aqui no repo com o nome muito criativo de arrow_mikael.dts.
+
+Siga o exemplo do somador para enteder como funciona o sistema de mapeamento de memória do Avalon. Há outras opções mais avançadas como pipeline ou burts (estou usando burst aqui no projeto da matrix), para saber as possibilidades e como fazer consulte a [documentação da intel](https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/manual/mnl_avalon_spec.pdf).

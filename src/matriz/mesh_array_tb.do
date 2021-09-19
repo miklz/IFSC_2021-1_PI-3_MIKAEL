@@ -1,7 +1,7 @@
 
 vlib work
 
-vcom array_types.vhd PE.vhd mesh_array.vhd mesh_array_tb.vhd
+vcom array_types.vhd file_helpers.vhd PE.vhd mesh_array.vhd mesh_array_tb.vhd
 
 vsim -t ns work.mesh_array_tb
 

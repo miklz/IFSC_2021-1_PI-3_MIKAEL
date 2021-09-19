@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
 use work.array_types.all;
+use work.file_helpers.all;
 
 entity mesh_array_tb is
 end entity;
@@ -17,8 +18,6 @@ architecture simul of mesh_array_tb is
   constant matrix_b_file  : string := "../values_b.txt";
   constant multip_result  : string := "../product.txt";
 
-
-  type integer_vector is array (0 to matrix_size*matrix_size - 1) of integer;
   --type INTEGER_VECTOR_FILE is file of integer_vector;
   file flptr_a, flptr_b, flptr_r : text;--INTEGER_VECTOR_FILE;
 
@@ -29,68 +28,6 @@ architecture simul of mesh_array_tb is
   signal wires : vector_of_numbers(0 to 2*(matrix_size+1)*matrix_size-1) := (others => (others => 'Z'));
   signal matrix_a, matrix_b : vector_of_numbers(0 to matrix_size - 1) := (others => (others => 'Z'));
   signal matrix_c : vector_of_numbers(0 to matrix_size*matrix_size-1) := (others => (others => 'Z'));
-
-  procedure load_array(variable ln : inout line; variable integer_array : out integer_vector) is
-  
-  begin
-
-      for k in integer_array'range loop
-        read(ln, integer_array(k));
-      end loop;
-
-  end procedure load_array;
-
-  procedure read_array_from_line(variable ln : inout line; signal vector : out vector_of_numbers) is
-      variable integer_array  : integer_vector;
-    begin
-      for k in integer_array'range loop
-        read(ln, integer_array(k));
-      end loop;
-
-      for i in 0 to matrix_size-1 loop
-        for j in 0 to matrix_size-1 loop
-          vector(matrix_size*i + j) <= to_signed(integer_array(matrix_size*i + j), n_bits);
-        end loop;
-      end loop;
-
-    end procedure read_array_from_line;
-
-    procedure read_row_from_line(variable integer_array : inout integer_vector; 
-        signal vector : out vector_of_numbers; constant index : in natural) is
-    begin
-      
-      for j in 0 to matrix_size-1 loop
-        vector(j) <= to_signed(integer_array(matrix_size*index + j), n_bits);
-      end loop;
-
-    end procedure read_row_from_line;
-
-    procedure read_column_from_line(variable integer_array : inout integer_vector; 
-        signal vector : out vector_of_numbers; constant index : in natural) is
-    begin
-
-      for i in 0 to matrix_size-1 loop
-        vector(i) <= to_signed(integer_array(matrix_size*i + index), n_bits);
-      end loop;
-
-    end procedure read_column_from_line;
-
-    procedure write_array_to_line(variable ln : inout line; signal vector : vector_of_numbers) is
-        variable integer_array  : integer_vector;
-      begin
-
-        for i in 0 to matrix_size-1 loop
-          for j in 0 to matrix_size-1 loop
-            integer_array(matrix_size*i + j) := to_integer(vector(matrix_size*i + j));
-          end loop;
-        end loop;
-
-        for k in integer_array'range loop
-          write(ln, integer_array(k));
-          write(ln, ' ');
-        end loop;
-
-      end procedure write_array_to_line;
 
 begin
 
