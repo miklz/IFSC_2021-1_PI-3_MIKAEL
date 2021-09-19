@@ -289,15 +289,35 @@ Isso irá gerar a imagem do kernel compactada. E para o sistema de arquivo você
 
 Após ter isso feito copie o kernel para dentro da partição 1 e o sistema de arquivo para a partição 2.
 
-Mais uma coisa: para poder fazer uso das 4 pontes do FPGA é necessário habilitar todas a pontes no dts como fiz no arquivo arrow_mikael.dts disponibilizado aqui no repositório.
+Mais uma coisa: para poder fazer uso das 4 pontes do FPGA é necessário habilitar todas a pontes no dts como fiz no arquivo arrow_mikael.dts disponibilizado aqui no repositório. 
 
 ``` bash
 # Build dtb pela árvore do kernel (kernel tree)
+# Esse arquivo deve estar em arch/arm/boot/dts
 make arrow_mikael.dts
 # Outra opção usando device tree compilers
 dtc -O dtb -o arrow_mikael.dts arrow_mikael.dtb
 ```
 Copie o .dtb para a mesma partição do kernel
+
+Com tudo feito aí em cima (se eu não esqueci de alguma coisa) a placa deve iniciar normalmente.
+
+Para configurar o DTO na placa eu fiz um script chamado de flash_fpga.sh que também está aqui no repositório. Os arquivos <module_name>.rbf e <module_name>.dtbo devem estar no mesmo diretório que o script.
+
+``` bash
+# Configurar os diretórios
+./flash_fpga.sh init
+# Adicionar o seu dto e flexar a placa
+./flash_fpga.sh add_dto <module_name>
+# Remover dtbo 
+./flash_fpga.sh remove_dto <module_name>
+# Habilitar caso já tenha sido adicionado anteriormente
+./flash_fpga.sh enable_dto <module_name>
+# Excluir completamente
+./flash_fpga.sh wipeout_dto <module_name>
+```
+
+Para entender o que o script está fazendo eu recomendo ler o arquivo.
 
 ## Melhor referência
 
@@ -305,4 +325,4 @@ Infelizmente não encontrei isso quando estava começando nessa jornada, o melho
 
 Como é dito no tutorial citado acima é necessário que as pontes do FPGA estejam ativas, no meu caso quando eu fiz o build do kernel só consegui ver duas pontes a Lightweight e a hps2fpga. Para habilitar todas as pontes eu fiz uma cópia do DTS usado no build (socfpga_cyclone5_socdk.dts) e habilitei as duas pontes. O DTS está aqui no repo com o nome muito criativo de arrow_mikael.dts.
 
-Siga o exemplo do somador para enteder como funciona o sistema de mapeamento de memória do Avalon. Há outras opções mais avançadas como pipeline ou burts (estou usando burst aqui no projeto da matrix), para saber as possibilidades e como fazer consulte a [documentação da intel](https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/manual/mnl_avalon_spec.pdf).
+Siga o exemplo do somador para enteder como o sistema de mapeamento de memória do Avalon funciona. Há outras opções mais avançadas como pipeline ou burts (estou usando burst aqui no projeto da matrix), para saber as possibilidades e como fazer consulte a [documentação da intel](https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/manual/mnl_avalon_spec.pdf).
