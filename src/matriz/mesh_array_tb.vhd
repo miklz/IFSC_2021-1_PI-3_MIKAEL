@@ -50,7 +50,7 @@ begin
 
   matrix_mult : process
     variable line_a, line_b, line_r : line;
-    variable input_a, input_b       : integer_vector;
+    variable input_a, input_b       : integer_vector(0 to matrix_size*matrix_size - 1);
     variable file_status_a, file_status_b, file_status_r  : FILE_OPEN_STATUS;
   begin
 
@@ -77,8 +77,8 @@ begin
       load_array(line_b, input_b);
 
       for index in 0 to matrix_size - 1 loop
-        read_column_from_line(input_a, matrix_a, index);
-        read_row_from_line(input_b, matrix_b, index);
+        read_column_from_line(input_a, matrix_a, matrix_size, index);
+        read_row_from_line(input_b, matrix_b, matrix_size, index);
 
         wait for T;
       end loop;
@@ -88,7 +88,7 @@ begin
 
       wait for matrix_size*T;
       
-      write_array_to_line(line_r, matrix_c);
+      write_array_to_line(line_r, matrix_c, matrix_size);
       writeline(flptr_r, line_r);
 
       rst <= '1';

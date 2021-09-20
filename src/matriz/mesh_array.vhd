@@ -95,7 +95,7 @@ architecture behave of mesh_array is
       elsif (rising_edge(clock)) then
         if (done = '0') then
           index := index + 1;
-          if index >= N then
+          if index >= 2*N then
             index := 0;
             done <= '1';
           end if;

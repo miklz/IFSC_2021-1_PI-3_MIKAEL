@@ -6,8 +6,8 @@ use work.array_types.all;
 
 entity matrix_mult_control is
     generic (
-        N_dim   :=  5;
-        N_bits  :=  32
+        N_dim  : natural :=  5;
+        N_bits : natural :=  32
     );
 
     port (
@@ -16,6 +16,7 @@ entity matrix_mult_control is
         avs_burstcount          :   in  std_logic_vector(10 downto 0);
         avs_write               :   in  std_logic;
         avs_writedata           :   in  std_logic_vector(N_bits - 1 downto 0);
+        avs_waitrequest         :   out std_logic;
         avs_read                :   in  std_logic;
         avs_readdata            :   out std_logic_vector(N_bits - 1 downto 0);
         avs_readdatavalid       :   out std_logic
@@ -24,7 +25,7 @@ end entity matrix_mult_control;
 
 architecture behave of matrix_mult_control is
     
-    signal double_buffer_matrix_row :   vector_of_numbers(0 to 4*N_dim - 1);
+    signal double_buffer_matrix_row :   vector_of_numbers(0 to 4*N_dim - 1) := (others => (others => 'Z'));
     signal matrix_a_column          :   vector_of_numbers(0 to N_dim - 1);
     signal matrix_b_row             :   vector_of_numbers(0 to N_dim - 1);
     signal matrix_c                 :   vector_of_numbers(0 to N_dim*N_dim - 1);
@@ -39,24 +40,24 @@ architecture behave of matrix_mult_control is
             if (reset = '1') then
                 index := 0;
                 switch_buffer <= '0';
+                avs_waitrequest <= '1';
                 double_buffer_matrix_row <= (others => (others => '0'));
             elsif (rising_edge(clock)) then
+                avs_waitrequest <= '0';
                 if (avs_write = '1') then
-                    double_buffer_matrix_row(index) <= avs_writedata;
-                else
-                    double_buffer_matrix_row(index) <= (others => '0');
+                    double_buffer_matrix_row(index) <= signed(avs_writedata);
+                    index := index + 1;
                 end if;
-                index := index + 1;
             end if;
 
-            -- Control double buffer
-            if (index < 2*N-1) then
+            -- Double buffer control
+            if (index < 2*N_dim-1) then
                 switch_buffer <= '0';
             else
                 switch_buffer <= '1';
             end if;
 
-            if (index >= 4*N-1) then
+            if (index > 4*N_dim-1) then
                 index := 0;
             end if;
 
@@ -69,7 +70,7 @@ architecture behave of matrix_mult_control is
             if (reset = '1') then
                 index := 0;
                 avs_readdata <= (others => '0');
-                matrix_output <= (others => (others => '0'));
+                matrix_c <= (others => (others => '0'));
             elsif (rising_edge(clock)) then
                 if (avs_read = '1') then
                     if (ready = '0') then
@@ -78,7 +79,7 @@ architecture behave of matrix_mult_control is
                         index := index + 1;
                         avs_readdatavalid <= '1';
                     end if;
-                    avs_readdata <= matrix_c(index);
+                    avs_readdata <= std_logic_vector(matrix_c(index));
                 else
                     avs_readdata <= (others => '0');
                 end if;
@@ -99,7 +100,7 @@ architecture behave of matrix_mult_control is
                 clk_mult <= '0';
             elsif(rising_edge(clock)) then
                 index := index + 1;
-                if (index = 2*N-1) then
+                if (index = 2*N_dim-1) then
                     index := 0;
                     clk_mult <= not clk_mult;
                 end if;
@@ -111,19 +112,19 @@ architecture behave of matrix_mult_control is
         generic map(
             N => N_dim,
             M => N_dim
-          );
+          )
         port map (
             clock => clk_mult, reset => reset, matrix_a => matrix_a_column,
             matrix_b => matrix_b_row, matrix_c => matrix_c, ready => ready
         );
 
         matrix_a_column <=
-            double_buffer_matrix_row(0 to N-1)      when ((switch_buffer = '0') and (ready='0')) else 
-            double_buffer_matrix_row(2*N to 3*N-1)  when ((switch_buffer = '1') and (ready='0')) else
+            double_buffer_matrix_row(0 to N_dim-1)      when ((switch_buffer = '0') and (ready='0')) else 
+            double_buffer_matrix_row(2*N_dim to 3*N_dim-1)  when ((switch_buffer = '1') and (ready='0')) else
             (others => (others => '0'));
         matrix_b_row <=
-            double_buffer_matrix_row(N to 2*N-1)    when ((switch_buffer = '0') and (ready='0')) else 
-            double_buffer_matrix_row(3*N to 4*N-1)  when ((switch_buffer = '1') and (ready='0')) else
+            double_buffer_matrix_row(N_dim to 2*N_dim-1)    when ((switch_buffer = '0') and (ready='0')) else 
+            double_buffer_matrix_row(3*N_dim to 4*N_dim-1)  when ((switch_buffer = '1') and (ready='0')) else
             (others => (others => '0'));
 
 end architecture behave;

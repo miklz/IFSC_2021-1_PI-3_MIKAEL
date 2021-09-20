@@ -9,9 +9,6 @@ package file_helpers is
 
   constant N_BITS : natural := 32;
 
-  subtype number is signed(N_BITS-1 downto 0);
-  type vector_of_numbers is array (natural range <>) of number;
-
   procedure load_array (
     variable ln             : inout line; 
     variable integer_array  : out integer_vector
@@ -19,24 +16,28 @@ package file_helpers is
   
   procedure read_array_from_line (
     variable ln   : inout line; 
-    signal vector : out vector_of_numbers
+    signal vector : out vector_of_numbers; 
+    constant matrix_size : in natural
     );
 
   procedure read_row_from_line (
-    variable integer_array  : inout integer_vector; 
-    signal vector           : out vector_of_numbers; 
-    constant index          : in natural
+    variable  integer_array : inout integer_vector; 
+    signal    vector        : out vector_of_numbers; 
+    constant  matrix_size   : in natural;
+    constant  index         : in natural
     );
 
   procedure read_column_from_line (
-    variable integer_array  : inout integer_vector; 
-    signal vector           : out vector_of_numbers; 
-    constant index          : in natural
+    variable  integer_array : inout integer_vector; 
+    signal    vector        : out vector_of_numbers;
+    constant  matrix_size   : in natural;
+    constant  index         : in natural
     );
   
   procedure write_array_to_line (
-    variable ln   : inout line; 
-    signal vector : vector_of_numbers
+    variable  ln          : inout line; 
+    signal    vector      : vector_of_numbers;
+    constant  matrix_size : in natural
     );
 
 end package file_helpers;
@@ -53,8 +54,11 @@ package body file_helpers is
 
   end procedure load_array;
 
-  procedure read_array_from_line(variable ln : inout line; signal vector : out vector_of_numbers) is
-    variable integer_array  : integer_vector;
+  procedure read_array_from_line (
+    variable ln : inout line; 
+    signal vector : out vector_of_numbers; 
+    constant matrix_size : in natural) is
+    variable integer_array  : integer_vector(0 to matrix_size*matrix_size - 1);
   begin
     for k in integer_array'range loop
       read(ln, integer_array(k));
@@ -68,8 +72,11 @@ package body file_helpers is
 
   end procedure read_array_from_line;
 
-  procedure read_row_from_line(variable integer_array : inout integer_vector; 
-      signal vector : out vector_of_numbers; constant index : in natural) is
+  procedure read_row_from_line (
+    variable  integer_array : inout integer_vector; 
+    signal    vector        : out vector_of_numbers;
+    constant  matrix_size   : in natural;
+    constant  index         : in natural) is
   begin
     
     for j in 0 to matrix_size-1 loop
@@ -78,8 +85,11 @@ package body file_helpers is
 
   end procedure read_row_from_line;
 
-  procedure read_column_from_line(variable integer_array : inout integer_vector; 
-      signal vector : out vector_of_numbers; constant index : in natural) is
+  procedure read_column_from_line (
+    variable  integer_array : inout integer_vector; 
+    signal    vector        : out vector_of_numbers;
+    constant  matrix_size   : in natural;
+    constant  index         : in natural) is
   begin
 
     for i in 0 to matrix_size-1 loop
@@ -88,8 +98,12 @@ package body file_helpers is
 
   end procedure read_column_from_line;
 
-  procedure write_array_to_line(variable ln : inout line; signal vector : vector_of_numbers) is
-      variable integer_array  : integer_vector;
+  procedure write_array_to_line (
+    variable ln           : inout line; 
+    signal vector         : vector_of_numbers;
+    constant matrix_size  : in natural) is
+    
+      variable integer_array  : integer_vector(0 to matrix_size*matrix_size - 1);
   begin
 
     for i in 0 to matrix_size-1 loop
