@@ -9,6 +9,7 @@ view wave
 
 add wave -radix binary -label reset /rst
 add wave -radix binary -label clock /clk
+add wave -radix binary -label beginburst /beginburst_avm
 add wave -radix signed -label burstcount_avm /burstcount_avm
 add wave -radix binary -label write_avm /write_avm
 add wave -radix signed -label writedata_avm /writedata_avm
@@ -16,7 +17,11 @@ add wave -radix binary -label waitrequest_avs /waitrequest_avs
 add wave -radix binary -label read_avm /read_avm
 add wave -radix signed -label readdata_avs /readdata_avs
 add wave -radix binary -label readdatavalid_avs /readdatavalid_avs
+
+# interface signals
 add wave -radix signed -label double_buffer /interface_avalon/double_buffer_matrix_row
+add wave -radix signed -label matrix_a_column /interface_avalon/matrix_a_column
+add wave -radix signed -label matrix_b_row /interface_avalon/matrix_b_row
 
 run 1500ns
 

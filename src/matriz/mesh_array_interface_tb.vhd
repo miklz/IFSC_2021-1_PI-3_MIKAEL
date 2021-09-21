@@ -26,6 +26,7 @@ architecture simul of mesh_array_tb is
     signal clk, rst : std_logic;
     
     -- Avalon signals
+    signal beginburst_avm       : std_logic;
     signal burstcount_avm       : std_logic_vector(10 downto 0);
     signal write_avm            : std_logic;
     signal writedata_avm        : std_logic_vector(n_bits-1 downto 0);
@@ -47,7 +48,7 @@ architecture simul of mesh_array_tb is
             N_bits  =>  n_bits
         )
         port map (
-            clk, rst, burstcount_avm, write_avm, writedata_avm,
+            clk, rst, beginburst_avm, burstcount_avm, write_avm, writedata_avm,
             waitrequest_avs, read_avm, readdata_avs, readdatavalid_avs
           );
 
@@ -80,6 +81,7 @@ architecture simul of mesh_array_tb is
             write_avm <= '0';
             read_avm <= '0';
             rst <= '0';
+            beginburst_avm <= '0';
 
             while(not endfile(flptr_a)) loop
                 readline(flptr_a, line_a);
@@ -89,21 +91,30 @@ architecture simul of mesh_array_tb is
                 read_array_from_line(line_b, matrix_b, matrix_size);
                 
                 burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
-                write_avm <= '1';
                 
                 wait for T;
 
                 -- Write to matrix mesh
                 for i in 0 to matrix_size - 1 loop
                     -- Check if matrix is ready to receive data
-                    burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
-                    wait for T;
+                    if (waitrequest_avs = '1') then
+                        -- Wait until matrix is ready
+                        wait until waitrequest_avs = '0';
+                    end if;
+
                     if (waitrequest_avs = '0') then
                         burstcount_avm <= (others => '0');
                         -- Load matrix A
                         for j in 0 to matrix_size - 1 loop
                             -- Column order
                             writedata_avm <= std_logic_vector(matrix_a(j*matrix_size + i));
+                            -- Signaling the begin of burst data needs to be ready to go
+                            beginburst_avm <= '1';
+                            burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
+                            write_avm <= '1';
+                            wait for T;
+
+                            beginburst_avm <= '0';
                             wait for T;
                         end loop;
 
@@ -113,30 +124,42 @@ architecture simul of mesh_array_tb is
                             writedata_avm <= std_logic_vector(matrix_b(i*matrix_size + j));
                             wait for T;
                         end loop;
-                    else
-                        -- Wait until matrix is ready
-                        wait until waitrequest_avs = '0';
                     end if;
                 end loop;
 
                 write_avm <= '0';
                 read_avm <= '1';
 
+                -- Burst to read Result
+                beginburst_avm <= '1';
+                burstcount_avm <= std_logic_vector(to_unsigned(matrix_size*matrix_size, burstcount_avm'length));
+
+                wait for T;
+
+                if (waitrequest_avs = '1') then
+                    -- Wait until matrix is ready
+                    wait until waitrequest_avs = '0';
+                end if;
+
                 -- Read from matrix mesh
-                for i in 0 to matrix_size - 1 loop
-                    for j in 0 to matrix_size - 1 loop
-                        -- Only load if data is valid
-                        if (readdatavalid_avs = '1') then
-                            if (read_avm = '1') then
-                                matrix_c(i*matrix_size + j) <= signed(readdata_avs);
+                beginburst_avm <= '0';
+                if (waitrequest_avs = '0') then
+                    burstcount_avm <= (others => '0');
+                    for i in 0 to matrix_size - 1 loop
+                        for j in 0 to matrix_size - 1 loop
+                            -- Only load if data is valid
+                            if (readdatavalid_avs = '1') then
+                                if (read_avm = '1') then
+                                    matrix_c(i*matrix_size + j) <= signed(readdata_avs);
+                                end if;
+                            else
+                                -- Wait for data to be valid
+                                wait until readdatavalid_avs = '1';
                             end if;
-                        else
-                            -- Wait for data to be valid
-                            wait until readdatavalid_avs = '1';
-                        end if;
-                        wait for T;
+                            wait for T;
+                        end loop;
                     end loop;
-                end loop;
+                end if;
 
             end loop;
 
