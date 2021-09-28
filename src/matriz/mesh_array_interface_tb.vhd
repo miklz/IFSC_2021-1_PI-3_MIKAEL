@@ -6,10 +6,10 @@ use ieee.std_logic_1164.all;
 use work.array_types.all;
 use work.file_helpers.all;
 
-entity mesh_array_tb is
+entity mesh_array_interface_tb is
 end entity;
 
-architecture simul of mesh_array_tb is
+architecture simul of mesh_array_interface_tb is
 
     constant T      : time := 20 ns;
     constant delay  : time := 5 ns;
@@ -67,8 +67,10 @@ architecture simul of mesh_array_tb is
         begin
 
             rst <= '1';
-
             writedata_avm <= (others => '0');
+            matrix_a <= (others => (others => '0'));
+            matrix_b <= (others => (others => '0'));
+            wait for 2*T;
 
             file_open(file_status_a, flptr_a, matrix_a_file, read_mode);
             file_open(file_status_b, flptr_b, matrix_b_file, read_mode);
@@ -90,32 +92,32 @@ architecture simul of mesh_array_tb is
                 read_array_from_line(line_a, matrix_a, matrix_size);
                 read_array_from_line(line_b, matrix_b, matrix_size);
                 
-                burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
-                
                 wait for T;
 
                 -- Write to matrix mesh
                 for i in 0 to matrix_size - 1 loop
-                    -- Check if matrix is ready to receive data
-                    if (waitrequest_avs = '1') then
-                        -- Wait until matrix is ready
-                        wait until waitrequest_avs = '0';
-                    end if;
 
+                    burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
                     if (waitrequest_avs = '0') then
-                        burstcount_avm <= (others => '0');
+                        -- Signaling the begin of burst
+                        beginburst_avm <= '1';
+                        write_avm <= '1';
+
                         -- Load matrix A
                         for j in 0 to matrix_size - 1 loop
                             -- Column order
                             writedata_avm <= std_logic_vector(matrix_a(j*matrix_size + i));
-                            -- Signaling the begin of burst data needs to be ready to go
-                            beginburst_avm <= '1';
-                            burstcount_avm <= std_logic_vector(to_unsigned(2*matrix_size, burstcount_avm'length));
-                            write_avm <= '1';
                             wait for T;
 
                             beginburst_avm <= '0';
-                            wait for T;
+                            -- Check if matrix is ready to receive data
+                            if (waitrequest_avs = '1') then
+                            -- Wait until matrix is ready
+                                wait until waitrequest_avs = '0';
+                                wait for T;
+                            end if;
+
+                            burstcount_avm <= (others => '0');
                         end loop;
 
                         -- Load matrix B
@@ -148,13 +150,11 @@ architecture simul of mesh_array_tb is
                     for i in 0 to matrix_size - 1 loop
                         for j in 0 to matrix_size - 1 loop
                             -- Only load if data is valid
+                            wait until readdatavalid_avs = '1';
                             if (readdatavalid_avs = '1') then
                                 if (read_avm = '1') then
                                     matrix_c(i*matrix_size + j) <= signed(readdata_avs);
                                 end if;
-                            else
-                                -- Wait for data to be valid
-                                wait until readdatavalid_avs = '1';
                             end if;
                             wait for T;
                         end loop;
@@ -165,4 +165,4 @@ architecture simul of mesh_array_tb is
 
         end process interface_test;
 
-end architecture;
+end architecture simul;

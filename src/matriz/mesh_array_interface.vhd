@@ -80,22 +80,16 @@ architecture behave of matrix_mult_control is
                             state_rcv <= START_RCV;
                         else
                             index := index + 1;
-                        end if;
+                            burst_count := burst_count - 1;
 
-                        burst_count := burst_count - 1;
-
-                        if (burst_count = 0) then
-                            state_rcv <= START_RCV;
+                            if (burst_count = 0) then
+                                state_rcv <= START_RCV;
+                                -- Inform that there're data available in buffer
+                                data_available <= '1';
+                            end if;
                         end if;
 
                         -- Double buffer control
-                        if (index < 2*N_dim-1) then
-                            switch_buffer <= '0';
-                        else
-                            switch_buffer <= '1';
-                            data_available <= '1';
-                        end if;
-
                         if (index > 4*N_dim-1) then
                             index := 0;
                         end if;
@@ -110,6 +104,7 @@ architecture behave of matrix_mult_control is
 
             if (reset = '1') then
                 index := 0;
+                avs_readdatavalid <= '0';
                 avs_readdata <= (others => '0');
                 matrix_c <= (others => (others => '0'));
             elsif (rising_edge(clock)) then
@@ -140,11 +135,18 @@ architecture behave of matrix_mult_control is
                 index := 0;
                 clk_mult <= '0';
             elsif(rising_edge(clock)) then
+                index := index + 1;
                 if (data_available = '1') then
-                    index := index + 1;
-                    if (index = 2*N_dim-1) then
+                    if (index >= 2*N_dim-1) then
                         index := 0;
                         clk_mult <= not clk_mult;
+                    end if;
+
+                    -- FIX ME
+                    if (index <= 2*N_dim) then
+                        switch_buffer <= '0';
+                    else
+                        switch_buffer <= '1';
                     end if;
                 end if;
             end if;
