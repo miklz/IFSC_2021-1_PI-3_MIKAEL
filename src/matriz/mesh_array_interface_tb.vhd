@@ -130,38 +130,46 @@ architecture simul of mesh_array_interface_tb is
                 end loop;
 
                 write_avm <= '0';
+                wait for T;
+                
+                -- Ask for data
                 read_avm <= '1';
-
                 -- Burst to read Result
                 beginburst_avm <= '1';
                 burstcount_avm <= std_logic_vector(to_unsigned(matrix_size*matrix_size, burstcount_avm'length));
-
                 wait for T;
 
+                -- Begin burst goes down no matter what
+                beginburst_avm <= '0';
                 if (waitrequest_avs = '1') then
                     -- Wait until matrix is ready
                     wait until waitrequest_avs = '0';
+                    wait for T;
                 end if;
 
                 -- Read from matrix mesh
                 beginburst_avm <= '0';
+                read_avm <= '0';
                 if (waitrequest_avs = '0') then
                     burstcount_avm <= (others => '0');
+                    -- Only load if data is valid
+                    wait until readdatavalid_avs = '1';
                     for i in 0 to matrix_size - 1 loop
                         for j in 0 to matrix_size - 1 loop
-                            -- Only load if data is valid
-                            wait until readdatavalid_avs = '1';
                             if (readdatavalid_avs = '1') then
-                                if (read_avm = '1') then
-                                    matrix_c(i*matrix_size + j) <= signed(readdata_avs);
-                                end if;
+                                matrix_c(i*matrix_size + j) <= signed(readdata_avs);
                             end if;
                             wait for T;
                         end loop;
                     end loop;
                 end if;
 
+                write_array_to_line(line_r, matrix_c, matrix_size);
+                writeline(flptr_r, line_r);
+
             end loop;
+
+            wait;
 
         end process interface_test;
 

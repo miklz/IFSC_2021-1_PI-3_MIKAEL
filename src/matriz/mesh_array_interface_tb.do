@@ -21,13 +21,17 @@ add wave -radix signed -label readdata_avs /readdata_avs
 add wave -radix binary -label readdatavalid_avs /readdatavalid_avs
 
 add wave -height 15 -divider "Matrix Interface"
-add wave -radix binary -label matrix_clk /interface_avalon/clk_mult
+add wave -label state /interface_avalon/state_ctrl
+add wave -radix unsigned -label index_rcv /interface_avalon/avalon_burst/index_rcv
+add wave -radix binary -label matrix_clk /interface_avalon/clk_mtx
+add wave -radix binary -label matrix_rst /interface_avalon/rst_mtx
 add wave -radix binary -label double_buffer_ctrl  /interface_avalon/switch_buffer
 add wave -radix signed -label double_buffer /interface_avalon/double_buffer_matrix_row
 add wave -radix signed -label matrix_a_column /interface_avalon/matrix_a_column
 add wave -radix signed -label matrix_b_row /interface_avalon/matrix_b_row
+add wave -radix signed -label matrix_c /matrix_c
 
-run 1500ns
+run 10us
 
 wave zoomfull
 write wave wave.ps
