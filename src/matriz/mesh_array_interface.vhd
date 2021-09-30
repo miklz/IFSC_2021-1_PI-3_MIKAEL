@@ -27,8 +27,10 @@ end entity matrix_mult_control;
 architecture behave of matrix_mult_control is
     
     type avalon_state is (START, LOAD, SEND);
+    type matrix_state is (START, MIDDLE, END_STATE);
 
     signal state_ctrl   :   avalon_state;
+    signal state_matrix :   matrix_state;
 
     signal double_buffer_matrix_row :   vector_of_numbers(0 to 4*N_dim - 1) := (others => (others => 'Z'));
     signal matrix_a_column          :   vector_of_numbers(0 to N_dim - 1)   := (others => (others => 'Z'));
@@ -36,17 +38,18 @@ architecture behave of matrix_mult_control is
     signal matrix_c                 :   vector_of_numbers(0 to N_dim*N_dim - 1) := (others => (others => 'Z'));
     signal ready, clk_mtx, rst_mtx  :   std_logic;
     signal switch_buffer, data_available  :   std_logic_vector(1 downto 0);
+    signal index_snd : unsigned (N_dim*N_dim downto 0);
 
     begin
 
         avalon_burst   :   process(clock, reset, avs_write)
-            variable    index_rcv, index_snd  :   natural :=  0;
-            variable    burst_count           :   unsigned(10 downto 0);
+            variable    index_rcv   :   natural :=  0;
+            variable    burst_count :   unsigned(10 downto 0);
         begin
 
             if (reset = '1') then
                 index_rcv := 0;
-                index_snd := 0;
+                index_snd <= (others => '0');
                 state_ctrl <= START;
                 avs_waitrequest <= '0';
                 avs_readdatavalid <= '0';
@@ -73,6 +76,7 @@ architecture behave of matrix_mult_control is
                             else 
                                 -- If wasn't write than send
                                 state_ctrl <= SEND;
+                                index_snd <= (others => '0');
                             end if;
                         end if;
                     
@@ -99,7 +103,7 @@ architecture behave of matrix_mult_control is
                             data_available <= "00";
                         elsif ((index_rcv >= 2*N_dim - 1) and (index_rcv < 3*N_dim - 1)) then
                             data_available <= "01";
-                        elsif ((index_rcv >= 3*N_dim - 1) and (index_rcv < 4*N_dim - 1)) then
+                        elsif ((index_rcv >= 3*N_dim - 1) and (index_rcv <= 4*N_dim - 1)) then
                             data_available <= "10";
                         else
                             index_rcv := 0;
@@ -113,71 +117,79 @@ architecture behave of matrix_mult_control is
 
                         -- If there's data to send
                         if (ready = '1') then
-                            index_snd := index_snd + 1;
                             burst_count := burst_count - 1;
                             avs_readdatavalid <= '1';
+                            index_snd <= index_snd + "1";
 
                             if (burst_count = 0) then
                                 -- End of burst
                                 state_ctrl <= START;
-                                index_snd := 0;
                                 avs_readdatavalid <= '0';
                                 -- Reset matrix for new computing
                                 rst_mtx <= '1';
+                                index_snd <= (others => '0');
                             end if;
                         else
                             avs_readdatavalid <= '0';
                         end if;
-                    end case;
+                end case;
                 
-                avs_readdata <= std_logic_vector(matrix_c(index_snd));
+                avs_readdata <= std_logic_vector(matrix_c(to_integer(index_snd)));
             end if;
         end process avalon_burst;
 
-        matrix_clock    :   process(clock, reset)
-            variable index, clk_flip        :   natural := 0;
-            variable data_available_ctrl    :   std_logic_vector(1 downto 0);
+        state_transition_matrix  :   process(clock, reset, data_available)
+            variable index       :   natural := 0;
+            variable data_avai_comp : std_logic_vector(1 downto 0);
         begin
 
             if (reset = '1') then
                 index := 0;
-                clk_flip := 0;
-                clk_mtx <= '0';
-                switch_buffer <= "11";
-                data_available_ctrl := "00";
-            elsif(rising_edge(clock)) then
-                if (data_available_ctrl /= data_available) then
-                    data_available_ctrl := data_available;
-                    if (data_available = "01") then
-                        index := index + 1;
-                        clk_mtx <= '1';
-                        if (index < N_dim) then
-                            switch_buffer <= "00";
-                        end if;
-                    elsif (data_available = "11") then
-                        index := index + 1;
-                        clk_mtx <= '1';
-                        if (index < N_dim) then
-                            switch_buffer <= "11";
-                        end if;
-                    else
+                state_matrix <= START;
+                data_avai_comp := "00";
+                switch_buffer <= "10";
+            elsif (rising_edge(clock)) then
+                case state_matrix is
+                    when START =>
+                        state_matrix <= START;
                         clk_mtx <= '0';
-                    end if;
-                end if;
+                        if (data_avai_comp /= data_available) then
+                            data_avai_comp := data_available;
+                            if (data_available = "01") then
+                                state_matrix <= MIDDLE;
+                                switch_buffer <= "00";
+                            elsif (data_available = "11") then
+                                state_matrix <= MIDDLE;
+                                switch_buffer <= "11";
+                            end if;
+                        end if;
 
-                if (ready = '0') then
-                    if (index >= N_dim) then
-                        switch_buffer <= "01";
+                    when MIDDLE =>
+                        index := index + 1;
+                        clk_mtx <= '1';
+                        if (index < N_dim) then
+                            state_matrix <= START;
+                        elsif (index = N_dim) then
+                            state_matrix <= MIDDLE;
+                        else
+                            clk_mtx <= '0';
+                            switch_buffer <= "01";
+                            state_matrix <= END_STATE;
+                        end if;
+
+                    when END_STATE =>
                         clk_mtx <= not clk_mtx;
-                    end if;
-                else
-                    if (index >= N_dim) then
-                        index := 0;
-                    end if;
-                end if;
+                        if (ready = '0') then
+                            state_matrix <= END_STATE;
+                        else
+                            index := 0;
+                            state_matrix <= START;
+                        end if;
+
+                end case;
             end if;
 
-        end process matrix_clock;
+        end process state_transition_matrix;
 
         mult_matrix :   entity  work.mesh_array(behave)
         generic map(

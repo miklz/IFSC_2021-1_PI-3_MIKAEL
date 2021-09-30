@@ -67,7 +67,11 @@ architecture simul of mesh_array_interface_tb is
         begin
 
             rst <= '1';
+            write_avm <= '0';
+            read_avm <= '0';
+            beginburst_avm <= '0';
             writedata_avm <= (others => '0');
+            burstcount_avm <= (others => '0');
             matrix_a <= (others => (others => '0'));
             matrix_b <= (others => (others => '0'));
             wait for 2*T;
@@ -80,10 +84,7 @@ architecture simul of mesh_array_interface_tb is
             assert ((file_status_a = open_ok) and (file_status_b = open_ok) and
             (file_status_r = open_ok)) report "FILE ERROR" severity error;
 
-            write_avm <= '0';
-            read_avm <= '0';
             rst <= '0';
-            beginburst_avm <= '0';
 
             while(not endfile(flptr_a)) loop
                 readline(flptr_a, line_a);
@@ -147,28 +148,32 @@ architecture simul of mesh_array_interface_tb is
                     wait for T;
                 end if;
 
-                -- Read from matrix mesh
-                beginburst_avm <= '0';
                 read_avm <= '0';
-                if (waitrequest_avs = '0') then
-                    burstcount_avm <= (others => '0');
+                burstcount_avm <= (others => '0');
+                -- Read from matrix mesh
+                if (readdatavalid_avs = '0') then
                     -- Only load if data is valid
                     wait until readdatavalid_avs = '1';
-                    for i in 0 to matrix_size - 1 loop
-                        for j in 0 to matrix_size - 1 loop
-                            if (readdatavalid_avs = '1') then
-                                matrix_c(i*matrix_size + j) <= signed(readdata_avs);
-                            end if;
-                            wait for T;
-                        end loop;
-                    end loop;
+                    wait for T;
                 end if;
+
+                for i in 0 to matrix_size - 1 loop
+                    for j in 0 to matrix_size - 1 loop
+                        matrix_c(i*matrix_size + j) <= signed(readdata_avs);
+                        wait for T;
+                    end loop;
+                end loop;
+                
 
                 write_array_to_line(line_r, matrix_c, matrix_size);
                 writeline(flptr_r, line_r);
+                wait for T;
 
             end loop;
 
+            file_close(flptr_a);
+            file_close(flptr_b);
+            file_close(flptr_r);
             wait;
 
         end process interface_test;
